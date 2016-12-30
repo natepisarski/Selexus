@@ -1,0 +1,20 @@
+{
+  "manifest_version": 2,
+
+  "name": "Selexus",
+  "description": "Take command of your current webpage using your keyboard. The web is at your fingertips!",
+  "version": "1.0",
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "css": ["selexus.css"],
+      "js": ["jquery.js", "selexus.js"],
+      "run_at": "document_end"
+    }
+  ],
+
+  "permissions": [
+    "activeTab"
+  ]
+}

@@ -1,0 +1,25 @@
+.selexus-popup {
+    background-color: black;
+    display: inline-block;
+    font-size: 10px;
+    font-weight: bold;
+    color: chartreuse;
+    position: absolute;
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 5px;
+}
+
+.selexus-entry-field {
+    position: absolute;
+    display: inline-block;
+    background-color: rgba(0, 199, 167, .9);
+
+    border-radius: 50px;
+    border-style: solid;
+    border-color: black;
+
+
+    color: black;
+    font-size: 60px;
+}
