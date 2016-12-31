@@ -1,147 +1,152 @@
-// Selexus Constants
-const SELEXUS_ACTIVATION_KEYCODE = 19;
-const SELEXUS_DEACTIVATION_KEYCODE = 19;
-const SELEXUS_ELEMENT_LIMIT = 9999;
-const SELEXUS_PRUNE_LIMIT = 500;
-
-var selexus_tags = [
+"use strict";
+var SelexusConstants = (function () {
+    function SelexusConstants() {
+    }
+    return SelexusConstants;
+}());
+SelexusConstants.ActivationKeycode = 19;
+SelexusConstants.DeactivationKeycode = 19;
+SelexusConstants.ElementLimit = 9999;
+SelexusConstants.PruneLimit = 750;
+SelexusConstants.HintHeight = 85;
+SelexusConstants.HintWidth = 150;
+SelexusConstants.Tags = [
     "a",
     "input",
     "button",
     "img"
 ];
-
-var selexus_attributes = [
+SelexusConstants.Attributes = [
     "click",
     "keypress",
     "focus"
 ];
-
-var selexus_map = {};
-var selexus_element_count = 0;
-
-var selexus_capture = false;
-var selexus_captureText = "";
-
-var selexus_documentKeypress;
-
-// Find elements which the user may want to select
-function selexus_getCandidateDom() {
-    var candidates = [];
-    $.each($("*"), function (index, x) {
-        if(selexus_element_count < SELEXUS_ELEMENT_LIMIT){
-            var clickEvent = $._data(x, 'events');
-            if (selexus_tags.includes(x.tagName.toLowerCase()) ||
-                (clickEvent && clickEvent.click)) {
-
-                candidates.push(x);
-                selexus_element_count = selexus_element_count + 1;
+var PageUtils = (function () {
+    function PageUtils() {
+    }
+    PageUtils.GetCandidateDom = function (tags, elementLimit) {
+        // Find elements which the user may want to select
+        var candidates = [];
+        var elementCount = 0;
+        $.each($("*"), function (index, x) {
+            if (elementCount < elementLimit) {
+                var clickEvent = x.onclick;
+                if (PageUtils.Includes(tags, (x.tagName.toLowerCase())) || (clickEvent)) {
+                    candidates.push(x);
+                    elementCount = elementCount + 1;
+                }
             }
-        }
-    });
-    return candidates;
-}
-
-// Assign the tooltip to the elements
-function selexus_activate() {3
-    var elements = selexus_getCandidateDom();
-    $.each(elements, function(index, item){
-
-        // <button></button> would turn into
-        // <button><div class="selexus-popup" id="selexus-0">0</div>
-        item.insertAdjacentHTML("beforeBegin",
-            '<div class="selexus-popup" id="selexus-' +
+        });
+        return candidates;
+    };
+    PageUtils.Includes = function (list, item) {
+        var rVal = false;
+        $.each(list, function (index, it) {
+            if (it == item) {
+                rVal = true;
+            }
+            else {
+            }
+        });
+        return rVal;
+    };
+    PageUtils.GeneratePopup = function (onItem, index) {
+        onItem.insertAdjacentHTML("beforeBegin", '<div class="selexus-popup" id="selexus-' +
             index +
             '" ' +
-                'style="left: ' + item.left +
-                "; top: " + item.top + '">' +
+            'style="left: ' + onItem.style.left +
+            "; top: " + onItem.style.top + '">' +
             index +
             '</div>');
-
-        selexus_map[index.toString()] = item;
-    });
-
-    var y = window.outerHeight / 2 + window.scrollY - ( 150); // ScrollY is used in case you're far down a page
-    var x = window.outerWidth / 2 + window.screenX - (150);
-    $("body").append(
-        $('<div class="selexus-entry-field" style="top: '+y+"px"+'; left: ' + x +
-            'px; height: 85px; width: 150px;"></div>')
-    );
-}
-
-// Removes numbers not matching this number or part of it
-function selexus_keep(number) {
-    if(number == null || isNaN(number)){
-        return;
+    };
+    PageUtils.GenerateEntryField = function () {
+        var y = window.outerHeight / 2 + window.scrollY - (150); // ScrollY is used in case you're far down a page
+        var x = window.outerWidth / 2 + window.screenX - (150);
+        $("body").append($('<div class="selexus-entry-field" style="top: ' + y + "px" + '; left: ' + x +
+            'px; height: 85px; width: 150px;"></div>'));
+    };
+    return PageUtils;
+}());
+var SelexusRuntime = (function () {
+    function SelexusRuntime() {
+        this.ElementMap = {};
+        this.ElementCount = 0;
+        this.IsCapturing = false;
+        this.CaptureText = "";
     }
-
-    $.each($(".selexus-popup"), function(index, item){
-        var safe = false;
-
-        if(number < Number(item.innerText)) {
-            // What's entered is the first part of this element's number (12 and 123)
-            if(item.innerText.substring(0, number.toString().length) == number.toString()) {
+    return SelexusRuntime;
+}());
+var runtime = new SelexusRuntime();
+var SelexusEvents = (function () {
+    function SelexusEvents() {
+    }
+    SelexusEvents.prototype.Activate = function () {
+        var elements = PageUtils.GetCandidateDom(SelexusConstants.Tags, SelexusConstants.ElementLimit);
+        $.each(elements, function (index, item) {
+            PageUtils.GeneratePopup(item, index);
+            runtime.ElementMap[index.toString()] = item;
+        });
+        PageUtils.GenerateEntryField();
+    };
+    SelexusEvents.prototype.OnlyKeep = function (number) {
+        if (number == null || isNaN(number)) {
+            return;
+        }
+        $.each($(".selexus-popup"), function (index, item) {
+            var safe = false;
+            if (number < Number(item.innerText)) {
+                // What's entered is the first part of this element's number (12 and 123)
+                if (item.innerText.substring(0, number.toString().length) == number.toString()) {
+                    safe = true;
+                }
+            }
+            // Exact match
+            if (Number(item.innerText) == number) {
                 safe = true;
             }
+            if (!safe) {
+                item.remove();
+            }
+        });
+    };
+    SelexusEvents.prototype.Deactivate = function () {
+        $(".selexus-popup").remove();
+        $(".selexus-entry-field").remove();
+        runtime = new SelexusRuntime();
+    };
+    SelexusEvents.prototype.NavigateTo = function (elementID) {
+        try {
+            runtime.ElementMap[elementID].focus();
+            runtime.ElementMap[elementID].click();
         }
-
-        // Exact match
-       if(Number(item.innerText) == number) {
-           safe = true;
-       }
-
-       if(!safe) {
-            item.remove();
-       }
-    });
-}
-
-
-// Remove the tooltip from the elements
-function selexus_deactivate() {
-    $(".selexus-popup").remove();
-    $(".selexus-entry-field").remove();
-
-    selexus_map = {};
-    selexus_captureText = "";
-    selexus_capture = false;
-    selexus_element_count = 0;
-}
-
-// Navigate to an element with the given ID
-function selexus_navigateTo(elementID) {
-    try {
-        selexus_map[elementID].focus();
-        selexus_map[elementID].click();
-    } catch(anyError){
-        selexus_deactivate();
-    }
-}
-
+        catch (anyError) {
+            this.Deactivate();
+        }
+    };
+    return SelexusEvents;
+}());
+var action = new SelexusEvents(); // May be better to have the whole thing be static, it gets the runtime easier now
 // Handle keyboard input, either navigating to an element or activating Selexus
-function selexus_dispatch(e){
-    if(selexus_capture && e.keyCode == SELEXUS_DEACTIVATION_KEYCODE) {
-        selexus_navigateTo(selexus_captureText); // Figure this out
-        selexus_deactivate();
+function SelexusDispatch(e) {
+    if (runtime.IsCapturing && e.keyCode == SelexusConstants.DeactivationKeycode) {
+        action.NavigateTo(runtime.CaptureText); // Figure this out
+        action.Deactivate();
         return;
     }
-
-    if(selexus_capture) {
-        if(selexus_captureText.length < SELEXUS_ELEMENT_LIMIT.toString().length) {
-            selexus_captureText += String.fromCharCode(e.charCode);
-            $(".selexus-entry-field")[0].innerText = selexus_captureText;
-            if (selexus_element_count < SELEXUS_PRUNE_LIMIT) {
-                selexus_keep(selexus_captureText);
+    if (runtime.IsCapturing) {
+        if (runtime.CaptureText.length < SelexusConstants.ElementLimit.toString().length) {
+            runtime.CaptureText += String.fromCharCode(e.charCode);
+            $(".selexus-entry-field")[0].innerText = runtime.CaptureText; // There will only be one .selexus-entry-field
+            if (runtime.ElementCount < SelexusConstants.PruneLimit) {
+                action.OnlyKeep(Number(runtime.CaptureText));
             }
         }
     }
-
-    if(!selexus_capture && e.keyCode == SELEXUS_ACTIVATION_KEYCODE) {
-        selexus_activate();
-        selexus_capture = true;
+    if (!runtime.IsCapturing && e.keyCode == SelexusConstants.ActivationKeycode) {
+        action.Activate();
+        runtime.IsCapturing = true;
         $("body").focus();
     }
-
     console.log(e.keyCode.toString());
 }
-$(document).keypress(selexus_dispatch);
+$(document).keypress(SelexusDispatch);
